@@ -6,9 +6,9 @@ from .models import Driver
 from django.core.exceptions import ValidationError
 
 
-class AddPassengerView(APIView):
+class AddDriverView(APIView):
     def post(self, request):
-        email = request.data.get('email')
+        email = request.data.get('email').strip().lower()
         phone = request.data.get('phone')
         first_name = request.data.get('first_name')
         last_name = request.data.get('last_name')
@@ -33,11 +33,27 @@ class AddPassengerView(APIView):
             )
         
         try: 
-            passenger = Driver.objects.create(
+            driver = Driver.objects.create(
                 email=email,
                 phone=phone,
                 first_name=first_name,
                 last_name=last_name
+            )
+            driver_data = {
+                "id": driver.driver_id,
+                "email": driver.email,
+                "phone": driver.phone,
+                "first_name": driver.first_name,
+                "last_name": driver.last_name,
+                # "created_at": driver.created_at,  
+                # "updated_at": driver.updated_at,
+            }
+            return JsonResponse(
+                {
+                    "message": "Driver created successfully.",
+                    "data": driver_data
+                },
+                status=status.HTTP_201_CREATED
             )
         except ValidationError as e:
             return JsonResponse({
