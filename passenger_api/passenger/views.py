@@ -40,6 +40,22 @@ class AddPassengerView(APIView):
                 first_name=first_name,
                 last_name=last_name
             )
+            passenger_data = {
+                "passenger_id": passenger.passenger_id,
+                "email": passenger.email,
+                "phone": passenger.phone,
+                "first_name": passenger.first_name,
+                "last_name": passenger.last_name,
+                "created_at": passenger.created_at,  
+                "updated_at": passenger.updated_at,
+            }
+            return JsonResponse(
+                {
+                    "message": "Passenger created successfully.",
+                    "data": passenger_data
+                },
+                status=status.HTTP_201_CREATED
+            )
         except ValidationError as e:
             return JsonResponse({
                 "error": "Validation error.",

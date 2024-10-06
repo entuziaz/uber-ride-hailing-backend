@@ -40,13 +40,13 @@ class AddDriverView(APIView):
                 last_name=last_name
             )
             driver_data = {
-                "id": driver.driver_id,
+                "driver_id": driver.driver_id,
                 "email": driver.email,
                 "phone": driver.phone,
                 "first_name": driver.first_name,
                 "last_name": driver.last_name,
-                # "created_at": driver.created_at,  
-                # "updated_at": driver.updated_at,
+                "created_at": driver.created_at,  
+                "updated_at": driver.updated_at,
             }
             return JsonResponse(
                 {
