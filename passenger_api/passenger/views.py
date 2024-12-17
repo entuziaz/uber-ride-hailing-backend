@@ -8,6 +8,7 @@ from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 import datetime
 import uuid 
+from .tasks import send_welcome_email
 
 
 ERROR_MESSAGES = {
@@ -61,6 +62,9 @@ class PassengerCreateView(APIView):
                 "created_at": passenger.created_at,  
                 "updated_at": passenger.updated_at,
             }
+
+            # send_welcome_email.delay(passenger.passenger_id)
+
             return Response(
                 {
                     "message": "Passenger created successfully.",
@@ -75,6 +79,12 @@ class PassengerCreateView(APIView):
                 "code": "VALIDATION_ERROR"
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        except IntegrityError as e:
+            return Response({
+                "error": "Database Integrity Error",
+                "details": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             return Response({
                 "error": ERROR_MESSAGES["SERVER_ERROR"],
