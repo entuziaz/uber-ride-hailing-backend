@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import AddPassengerView
+from .views import PassengerCreateView, PassengerRideBookingView
 
 urlpatterns = [
-    path("", AddPassengerView.as_view(), name="add-passenger")
+    path("passengers/", PassengerCreateView.as_view(), name="add-passenger"),
+    path('rides/book/', PassengerRideBookingView.as_view(), name='book-ride-passenger'),
 ]
