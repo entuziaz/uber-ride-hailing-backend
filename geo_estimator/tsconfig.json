@@ -10,4 +10,12 @@
     "outDir": "./dist",
   },
 
+  "include": ["src/**/*"],
+  "exclude": [
+    "dist",
+    "jest.config.ts",
+    "tests/**/*", 
+    "node_modules"
+  ]
+
 }

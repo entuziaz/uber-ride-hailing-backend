@@ -51,7 +51,7 @@ describe('POST /api/estimate', () => {
                 ride_type: 'standard',
             });
     
-        expect(response.status).toBe(500);  // Internal server error
+        expect(response.status).toBe(500);
         expect(response.body.error).toBe('Geohash service failure');
     });
 
