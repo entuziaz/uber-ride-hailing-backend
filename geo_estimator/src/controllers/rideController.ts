@@ -7,7 +7,6 @@ export const estimateRide: RequestHandler = (req, res, next): void => {
     try {
         const { pickup_location, dropoff_location, ride_type } = req.body;
 
-        // Validate Input
         if (!pickup_location || !dropoff_location || !ride_type) {
             res.status(400).json({ error: "Missing required fields." });
             return;

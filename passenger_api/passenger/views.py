@@ -9,6 +9,11 @@ from django.core.exceptions import ValidationError
 import datetime
 import uuid 
 from .tasks import send_welcome_email
+from .services import get_fare_and_hashed_location
+import logging
+
+logger = logging.getLogger('passenger')
+
 
 
 ERROR_MESSAGES = {
@@ -100,71 +105,106 @@ class PassengerCreateView(APIView):
     
 
 class PassengerRideBookingView(APIView):
-    def post(self, request):
-        pickup_location = request.data.get('pickup_location')
-        dropoff_location =  request.data.get('dropoff_location')
-        ride_type = request.data.get('ride_type')
+    VALID_RIDE_TYPES = ["standard", "premium"]
 
+    def validate_request_data(self, pickup_location, dropoff_location, ride_type):
+        """Validate the request data."""
         if not all([pickup_location, dropoff_location, ride_type]):
-            return Response({
+            raise ValidationError({
                 "error": ERROR_MESSAGES["MISSING_FIELDS_RIDE_BOOOKING"],
                 "code": "BAD_REQUEST"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        valid_ride_types = ["standard", "premium"]
-        if ride_type not in valid_ride_types:
-            return Response({
-                "error": ERROR_MESSAGES["INVALID_RIDE_TYPE"].format(ride_type=ride_type, valid_ride_types=valid_ride_types),
+            })
+
+        if ride_type not in self.VALID_RIDE_TYPES:
+            raise ValidationError({
+                "error": ERROR_MESSAGES["INVALID_RIDE_TYPE"].format(
+                    ride_type=ride_type, valid_ride_types=self.VALID_RIDE_TYPES
+                ),
                 "code": "INVALID_RIDE_TYPE"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        
-        try:
-            pickup_latitude = pickup_location['latitude']
-            pickup_longitude = pickup_location['longitude']
-            dropoff_latitude = dropoff_location['latitude']
-            dropoff_longitude = dropoff_location['longitude']
-        except (TypeError, KeyError):
-            return Response({
-                "error": ERROR_MESSAGES["INVALID_LOCATION"],
-                "code": "INVALID_LOCATION"
-            }, status=status.HTTP_400_BAD_REQUEST)
+            })
+
+        for location in [pickup_location, dropoff_location]:
+            lat, lon = location.get("latitude"), location.get("longitude")
+            if lat is None or lon is None:
+                raise ValidationError({
+                    "error": ERROR_MESSAGES["INVALID_LOCATION"],
+                    "details": f"Latitude or longitude is missing for location: {location}",
+                    "code": "INVALID_LOCATION"
+                })
+            if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+                raise ValidationError({
+                    "error": ERROR_MESSAGES["INVALID_LOCATION"],
+                    "details": f"Invalid latitude ({lat}) or longitude ({lon}) range.",
+                    "code": "INVALID_LOCATION"
+                })
+
+    def post(self, request):
+        pickup_location = request.data.get("pickup_location")
+        dropoff_location = request.data.get("dropoff_location")
+        ride_type = request.data.get("ride_type")
 
         try:
+            self.validate_request_data(pickup_location, dropoff_location, ride_type)
+
+            pickup_lat = pickup_location.get("latitude")
+            pickup_lng = pickup_location.get("longitude")
+            dropoff_lat = dropoff_location.get("latitude")
+            dropoff_lng = dropoff_location.get("longitude")
+
+
             ride_request_data = {
                 "ride_id": str(uuid.uuid4()),
                 "pickup_location": {
-                    "latitude": pickup_latitude,
-                    "longitude": pickup_longitude,
+                    "latitude": pickup_lat,
+                    "longitude": pickup_lng
                 },
                 "dropoff_location": {
-                    "latitude": dropoff_latitude,
-                    "longitude": dropoff_longitude,
+                    "latitude": dropoff_lat,
+                    "longitude": dropoff_lng
                 },
                 "ride_type": ride_type,
-                "booking_time": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                "booking_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             }
 
-        # TODO: Check if ride_id has been added to DB already: avoid race-condition
-        # Ensure to generate the uuid before checking for existing entries.
+            estimates_and_geohashes = get_fare_and_hashed_location(ride_request_data)
+
+            if not estimates_and_geohashes:
+                return Response({
+                    "error": "Failed to get fare estimates and location data.",
+                    "details": "The external API did not return any data.",
+                    "code": "EXTERNAL_API_ERROR"
+                }, status=status.HTTP_502_BAD_GATEWAY)
+           
+            ride_request_data.update({
+                "estimated_fare": estimates_and_geohashes["data"]["estimated_fare"],
+                "pickup_geohash": estimates_and_geohashes["data"]["pickup_geohash"],
+                "dropoff_geohash": estimates_and_geohashes["data"]["dropoff_geohash"],
+            })
+
+            logger.debug(f"Updated ride_request_data: {ride_request_data}")
 
             return Response({
                 "message": "Ride request created successfully.",
                 "data": ride_request_data
             }, status=status.HTTP_201_CREATED)
-        
+
         except ValidationError as e:
+            missing_fields = [field for field in ["pickup_location", "dropoff_location", "ride_type"] if not request.data.get(field)]
             return Response({
-                "error": "Validation error.",
-                "details": e.message_dict,
-                "code": "VALIDATION_ERROR"
+                "error": e.message_dict.get("error", "Validation error."),
+                "details": {
+                    "missing_fields": missing_fields,
+                    "message": e.message_dict.get("details", "The provided data is invalid.")
+                },
+                "code": e.message_dict.get("code", "VALIDATION_ERROR")
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         except Exception as e:
-            print(f"Server error: {e}")
+            logger.debug(f"Updated ride_request_data: {e}")
             return Response({
                 "error": ERROR_MESSAGES["SERVER_ERROR"],
                 "details": str(e),
                 "code": "SERVER_ERROR",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 

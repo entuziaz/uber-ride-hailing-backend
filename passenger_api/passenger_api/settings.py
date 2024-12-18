@@ -154,3 +154,36 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 # Ensure email settings are correct
 if EMAIL_USE_SSL and EMAIL_USE_TLS:
     raise ValueError("Cannot use both SSL and TLS. Choose one.")
+
+
+# Geo_estimator Node.js Settings
+GEOES_NODE_API_URL = os.getenv('GEOES_NODE_API_URL')
+
+
+# Logging Settings
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '../passenger_api/passenger/ride_booking.log',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'passenger': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
