@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'passenger',
+    'drf_spectacular',
 
 ]
 
@@ -130,3 +131,83 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Celery RabbitMQ
+
+CELERY_BROKER_URL =  os.getenv('SECRET_KEY')
+CELERY_RESULT_BACKEND = 'rpc://'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Email settings
+
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+
+# Ensure email settings are correct
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+    raise ValueError("Cannot use both SSL and TLS. Choose one.")
+
+
+# Geo_estimator Node.js Settings
+GEOES_NODE_API_URL = os.getenv('GEOES_NODE_API_URL')
+
+
+# Logging Settings
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '../passenger_api/passenger/ride_booking.log',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'passenger': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
+
+# REST Framework Settings
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Spectacular Settings
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Passenger API 👫',
+    'DESCRIPTION': 'This is the Uberv Passenger API.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,  # Hides the schema from being served in the UI itself
+    'CONTACT': {
+        'name': 'Support Team',
+        'email': 'support@uberv.com',
+        'url': 'https://uberv.com/contact',
+    },
+  
+   
+}
