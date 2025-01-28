@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema, OpenApiExample
 from django.shortcuts import render
 from rest_framework.views import APIView
 from django.http import JsonResponse
@@ -7,6 +8,49 @@ from django.core.exceptions import ValidationError
 
 
 class AddDriverView(APIView):
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "email": {"type": "string", "example": "test@example.com"},
+                    "phone": {"type": "string", "example": "+1234567890"},
+                    "first_name": {"type": "string", "example": "John"},
+                    "last_name": {"type": "string", "example": "Doe"},
+                },
+                "required": ["email", "phone", "first_name", "last_name"]
+            }
+        },
+        responses={
+            201: {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string", "example": "Driver created successfully."},
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "driver_id": {"type": "integer", "example": 1},
+                            "email": {"type": "string", "example": "test@example.com"},
+                            "phone": {"type": "string", "example": "+1234567890"},
+                            "first_name": {"type": "string", "example": "John"},
+                            "last_name": {"type": "string", "example": "Doe"},
+                            "created_at": {"type": "string", "example": "2023-01-01T00:00:00Z"},
+                            "updated_at": {"type": "string", "example": "2023-01-01T00:00:00Z"},
+                        }
+                    },
+                }
+            },
+            400: {
+                "type": "object",
+                "properties": {
+                    "error": {"type": "string", "example": "Validation error."},
+                    "details": {"type": "string", "example": "The email field is required."}
+                }
+            },
+        },
+        description="API endpoint to create a new driver."
+    )
+
     def post(self, request):
         email = request.data.get('email').strip().lower()
         phone = request.data.get('phone')
