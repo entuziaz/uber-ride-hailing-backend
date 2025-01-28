@@ -108,25 +108,6 @@ def test_passenger_create_server_error(api_client, monkeypatch):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # def test_book_ride_missing_fields(api_client):
 #     """Test when pickup_location, dropoff_location, or ride_type is missing"""
 #     data = {

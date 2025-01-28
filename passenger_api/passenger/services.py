@@ -22,7 +22,6 @@ def get_fare_and_hashed_location(ride_request_data):
 
         if response.status_code == 200:
             res = response.json()
-            print('res is res is res is res is res',res)
             return res
         else:
             raise Exception(f"Node.js API error: {response.status_code}, {response.text}")

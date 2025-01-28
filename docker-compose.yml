@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  passenger_api:
+    build:
+      context: ./passenger_api
+      dockerfile: Dockerfile
+    container_name: passenger_api
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./passenger/logs:/passenger_api/passenger/logs
+    environment:
+      - CELERY_BROKER_URL=amqp://rabbitmq
+    depends_on:
+      - rabbitmq
+      - geo_estimator
+
+  driver_api:
+    build:
+      context: ./driver_api
+      dockerfile: Dockerfile
+    container_name: driver_api
+    command: python manage.py runserver 0.0.0.0:8001
+    ports:
+      - "8001:8001"
+    environment:
+      - CELERY_BROKER_URL=amqp://rabbitmq
+    depends_on:
+      - rabbitmq
+      - geo_estimator
+
+  geo_estimator:
+    build:
+      context: ./geo_estimator
+      dockerfile: Dockerfile
+    container_name: geo_estimator
+    command: npm start
+    ports:
+      - "3000:3000"
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  celery_worker:
+    build:
+      context: ./passenger_api
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    command: celery -A passenger_api worker --loglevel=info
+    depends_on:
+      - rabbitmq
+      - redis

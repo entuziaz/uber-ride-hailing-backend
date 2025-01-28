@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'passenger',
+    'drf_spectacular',
 
 ]
 
@@ -186,4 +187,27 @@ LOGGING = {
             'propagate': False,
         },
     },
+}
+
+
+# REST Framework Settings
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Spectacular Settings
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Passenger API 👫',
+    'DESCRIPTION': 'This is the Uberv Passenger API.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,  # Hides the schema from being served in the UI itself
+    'CONTACT': {
+        'name': 'Support Team',
+        'email': 'support@uberv.com',
+        'url': 'https://uberv.com/contact',
+    },
+  
+   
 }

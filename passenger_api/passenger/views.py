@@ -1,7 +1,10 @@
+
 from django.shortcuts import render
 from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework import status
+# from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse, OpenApiTypes
 from rest_framework.response import Response
 from .models import Passenger
 from django.db import IntegrityError
@@ -27,7 +30,97 @@ ERROR_MESSAGES = {
     "SERVER_ERROR": "An unexpected error occurred. Please try again later."
 }
 
+
+
 class PassengerCreateView(APIView):
+    @extend_schema(
+        request={
+            "application/json": {
+                "example": {
+                    "email": "passenger@example.com",
+                    "phone": "+1234567890",
+                    "first_name": "John",
+                    "last_name": "Doe",
+                }
+            }
+        },
+        responses={
+            status.HTTP_201_CREATED: OpenApiResponse(
+                description="Passenger created successfully.",
+                response={
+                    "message": "Passenger created successfully.",
+                    "data": {
+                        "passenger_id": "uuid",
+                        "email": "passenger@example.com",
+                        "phone": "+1234567890",
+                        "first_name": "John",
+                        "last_name": "Doe",
+                        "created_at": "2023-10-01T12:34:56Z",
+                        "updated_at": "2023-10-01T12:34:56Z",
+                    },
+                },
+            ),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Validation or integrity error.",
+                response={
+                    "error": "Validation or integrity error.",
+                    "details": {
+                        "missing_fields": ["email", "phone", "first_name", "last_name"],
+                        "message": "The provided data is invalid or duplicates exist.",
+                    },
+                    "code": "BAD_REQUEST",
+                },
+            ),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
+                description="Internal server error.",
+                response={
+                    "error": "Internal server error occurred.",
+                    "details": "An unexpected error occurred.",
+                    "code": "SERVER_ERROR",
+                },
+            ),
+        },
+        examples=[
+            OpenApiExample(
+                "Valid Request",
+                value={
+                    "email": "passenger@example.com",
+                    "phone": "+1234567890",
+                    "first_name": "John",
+                    "last_name": "Doe",
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Invalid Request - Missing Fields",
+                value={},
+                request_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                "Invalid Request - Duplicate Email",
+                value={
+                    "email": "existing@example.com",  # Assuming this email already exists
+                    "phone": "+1234567890",
+                    "first_name": "John",
+                    "last_name": "Doe",
+                },
+                request_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                "Invalid Request - Duplicate Phone",
+                value={
+                    "email": "passenger@example.com",
+                    "phone": "+0987654321",  # Assuming this phone already exists
+                    "first_name": "John",
+                    "last_name": "Doe",
+                },
+                request_only=True,
+                status_codes=["400"],
+            ),
+        ],
+    )
     def post(self, request):
         email = request.data.get('email')
         phone = request.data.get('phone')
@@ -138,6 +231,80 @@ class PassengerRideBookingView(APIView):
                     "code": "INVALID_LOCATION"
                 })
 
+    @extend_schema(
+        request={
+            "application/json": {
+                "example": {
+                    "pickup_location": {"latitude": 40.7128, "longitude": -74.0060},
+                    "dropoff_location": {"latitude": 34.0522, "longitude": -118.2437},
+                    "ride_type": "standard",
+                }
+            }
+        },
+        responses={
+            status.HTTP_201_CREATED: OpenApiResponse(
+                description="Ride request created successfully.",
+                response={
+                    "message": "Ride request created successfully.",
+                    "data": {
+                        "ride_id": "uuid",
+                        "pickup_location": {"latitude": 40.7128, "longitude": -74.0060},
+                        "dropoff_location": {"latitude": 34.0522, "longitude": -118.2437},
+                        "ride_type": "standard",
+                        "booking_time": "2023-10-01 12:34:56",
+                        "estimated_fare": 25.50,
+                        "distance_km": 10.5,
+                        "pickup_geohash": "example_geohash",
+                        "dropoff_geohash": "example_geohash",
+                    },
+                },
+            ),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Validation error.",
+                response={
+                    "error": "Validation error.",
+                    "details": {
+                        "missing_fields": ["pickup_location", "dropoff_location", "ride_type"],
+                        "message": "The provided data is invalid.",
+                    },
+                    "code": "VALIDATION_ERROR",
+                },
+            ),
+            status.HTTP_502_BAD_GATEWAY: OpenApiResponse(
+                description="External API error.",
+                response={
+                    "error": "Failed to get fare estimates and location data.",
+                    "details": "The external API did not return any data.",
+                    "code": "EXTERNAL_API_ERROR",
+                },
+            ),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
+                description="Internal server error.",
+                response={
+                    "error": "Internal server error occurred.",
+                    "details": "An unexpected error occurred.",
+                    "code": "SERVER_ERROR",
+                },
+            ),
+        },
+        examples=[
+            OpenApiExample(
+                "Valid Request",
+                value={
+                    "pickup_location": {"latitude": 40.7128, "longitude": -74.0060},
+                    "dropoff_location": {"latitude": 34.0522, "longitude": -118.2437},
+                    "ride_type": "standard",
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Invalid Request - Missing Fields",
+                value={},
+                request_only=True,
+                status_codes=["400"],
+            ),
+        ],
+    )
     def post(self, request):
         pickup_location = request.data.get("pickup_location")
         dropoff_location = request.data.get("dropoff_location")
@@ -174,9 +341,12 @@ class PassengerRideBookingView(APIView):
                     "details": "The external API did not return any data.",
                     "code": "EXTERNAL_API_ERROR"
                 }, status=status.HTTP_502_BAD_GATEWAY)
+            
+            print(estimates_and_geohashes)
            
             ride_request_data.update({
                 "estimated_fare": estimates_and_geohashes["data"]["estimated_fare"],
+                "distance_km": estimates_and_geohashes["data"]["distance_km"],
                 "pickup_geohash": estimates_and_geohashes["data"]["pickup_geohash"],
                 "dropoff_geohash": estimates_and_geohashes["data"]["dropoff_geohash"],
             })
@@ -200,7 +370,7 @@ class PassengerRideBookingView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            logger.debug(f"Updated ride_request_data: {e}")
+            logger.debug(f"Error Updated ride_request_data: {e}")
             return Response({
                 "error": ERROR_MESSAGES["SERVER_ERROR"],
                 "details": str(e),
